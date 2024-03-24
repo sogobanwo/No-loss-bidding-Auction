@@ -59,7 +59,7 @@ contract AuctionContract{
 
     function makeBid(uint _auctionId, uint _bid) external {
 
-        if(!l.auctions[_auctionId]) revert AUCTION_ID_NOT_FOUND();
+        if(l.auctions[_auctionId].auctionCreator == address(0)) revert AUCTION_ID_NOT_FOUND();
 
         LibAppStorage.AuctionDetails storage ad = l.auctions[_auctionId];
 

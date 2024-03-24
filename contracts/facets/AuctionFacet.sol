@@ -12,7 +12,9 @@ error BID_LESS_THAN_EXISTING_BID();
 error AUCTION_ENDED();
 error NOT_A_VALID_BID();
 error INSUFFICIENT_BALANCE();
-
+error NOT_TOKEN_OWNER();
+error AUCTION_IN_PROGRESS();
+error NOT_HIGHEST_BIDDER();
 
 contract AuctionContract{
 
@@ -145,6 +147,46 @@ contract AuctionContract{
             lastInteractorFee
         );
         
+    }
+
+    function claimTokenEqOfAuctionItem(uint _auctionId) external {
+        LibAppStorage.AuctionDetails storage ad = l.auctions[_auctionId];
+
+        if (ad.hightestBidder = address(0)) {
+
+           IERC721(l.nftContractAddress).safeTransferFrom(address(this), ad.auctionCreator, ad.nftTokenId);
+
+        }else{
+
+        if (ad.auctionCreator != msg.sender) revert NOT_TOKEN_OWNER();
+
+        uint _auctionEllapseTime = ad.auctionCreatedTime + ad.duration;
+
+        if (block.timestamp < _auctionEllapseTime) revert AUCTION_IN_PROGRESS();
+
+        uint _nftValue = ad.currentBid * 90 /100
+
+        LibAppStorage._transferFrom(
+            address(this),
+            msg.sender,
+            _nftValue
+        );
+        }
+
+    }
+
+    function claimNFT(uint _auctionId) external {
+        LibAppStorage.AuctionDetails storage ad = l.auctions[_auctionId];
+
+        if (ad.auctionCreator != msg.sender) revert NOT_TOKEN_OWNER();
+
+        uint _auctionEllapseTime = ad.auctionCreatedTime + ad.duration;
+
+        if (block.timestamp < _auctionEllapseTime) revert AUCTION_IN_PROGRESS();
+
+        if (ad.hightestBidder != msg.sender) revert NOT_HIGHEST_BIDDER;
+
+        IERC721(l.nftContractAddress).safeTransferFrom(address(this), ad.hightestBidder, ad.nftTokenId);
     }
 
 }

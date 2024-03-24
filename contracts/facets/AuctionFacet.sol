@@ -136,7 +136,7 @@ contract AuctionContract{
         LibAppStorage._transferFrom(
             address(this),
             ad.previousBidder,
-            previousBidderFee
+            previousBidderFee + _bid
         );
 
         LibAppStorage._transferFrom(

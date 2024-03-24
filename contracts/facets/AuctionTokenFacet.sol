@@ -2,18 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "../libraries/LibAppStorage.sol";
-import "../interfaces/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract AuctionToken  is IERC20{
+contract AuctionTokenFacet  is IERC20{
     LibAppStorage.Layout internal at;
-
-    event Transfer(address indexed _from, address indexed _to, uint256 _value);
-
-    event Approval(
-        address indexed _owner,
-        address indexed _spender,
-        uint256 _value
-    );
 
     function onlyOwner() private view {
         require(

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IERC721} from "../interfaces/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {LibAppStorage} from "../libraries/LibAppStorage.sol";
 
 error ZERO_DURATION_NOT_ALLOWED();
@@ -16,7 +16,7 @@ error NOT_TOKEN_OWNER();
 error AUCTION_IN_PROGRESS();
 error NOT_HIGHEST_BIDDER();
 
-contract AuctionContract{
+contract AuctionFacet{
 
     LibAppStorage.Layout internal l;
 
@@ -76,6 +76,8 @@ contract AuctionContract{
         uint256 _bidderBalance = l.balances[msg.sender];
 
         if(_bidderBalance < _bid) revert INSUFFICIENT_BALANCE();
+
+        
 
         LibAppStorage._transferFrom(msg.sender, address(this), _bid);
 
@@ -152,7 +154,7 @@ contract AuctionContract{
     function claimTokenEqOfAuctionItem(uint _auctionId) external {
         LibAppStorage.AuctionDetails storage ad = l.auctions[_auctionId];
 
-        if (ad.hightestBidder = address(0)) {
+        if (ad.hightestBidder == address(0)) {
 
            IERC721(l.nftContractAddress).safeTransferFrom(address(this), ad.auctionCreator, ad.nftTokenId);
 
@@ -164,7 +166,7 @@ contract AuctionContract{
 
         if (block.timestamp < _auctionEllapseTime) revert AUCTION_IN_PROGRESS();
 
-        uint _nftValue = ad.currentBid * 90 /100
+        uint _nftValue = ad.currentBid * 90 /100;
 
         LibAppStorage._transferFrom(
             address(this),
@@ -184,7 +186,7 @@ contract AuctionContract{
 
         if (block.timestamp < _auctionEllapseTime) revert AUCTION_IN_PROGRESS();
 
-        if (ad.hightestBidder != msg.sender) revert NOT_HIGHEST_BIDDER;
+        if (ad.hightestBidder != msg.sender) revert NOT_HIGHEST_BIDDER();
 
         IERC721(l.nftContractAddress).safeTransferFrom(address(this), ad.hightestBidder, ad.nftTokenId);
     }

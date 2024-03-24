@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-error INSUFFICIENT_BALANCE();
-
 library LibAppStorage {
-	
+
   struct AuctionDetails {
 
         address auctionCreator;
@@ -68,10 +66,7 @@ library LibAppStorage {
     ) internal {
         Layout storage l = layoutStorage();
         uint256 balance = l.balances[msg.sender];
-
-        if (balance < _amount) {
-            revert INSUFFICIENT_BALANCE();
-        }
+        require(balance > _amount, "Insufficient funds");
         l.balances[_from] = balance - _amount;
         l.balances[_to] += _amount;
     }

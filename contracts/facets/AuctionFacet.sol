@@ -4,6 +4,10 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {LibAppStorage} from "../libraries/LibAppStorage.sol";
 
+
+
+contract AuctionFacet{
+
 error ZERO_DURATION_NOT_ALLOWED();
 error ZERO_PRICE_NOT_ALLOWED();
 error NOT_OWNER_OF_NFT();
@@ -15,8 +19,7 @@ error INSUFFICIENT_BALANCE();
 error NOT_TOKEN_OWNER();
 error AUCTION_IN_PROGRESS();
 error NOT_HIGHEST_BIDDER();
-
-contract AuctionFacet{
+error CREATOR_CANNOT_BID();
 
     LibAppStorage.Layout internal l;
 
@@ -28,7 +31,10 @@ contract AuctionFacet{
         if (_startingBid == 0) revert ZERO_PRICE_NOT_ALLOWED();
 
         // checking for owner of the NFT
-        if (IERC721(l.nftContractAddress).ownerOf(_nftTokenId) == msg.sender) revert NOT_OWNER_OF_NFT();
+        if (IERC721(l.nftContractAddress).ownerOf(_nftTokenId) != msg.sender) revert NOT_OWNER_OF_NFT();
+
+        // transferring NFT to Contract
+        IERC721(l.nftContractAddress).transferFrom(msg.sender, address(this), _nftTokenId);
 
         uint _newAuctionCount = l.auctionCount + 1;
 
@@ -51,15 +57,16 @@ contract AuctionFacet{
 
         ad.auctionCreatedTime = block.timestamp;
 
-        // transferring NFT to Contract
-        IERC721(l.nftContractAddress).safeTransferFrom(msg.sender, address(this), _nftTokenId);
         
         // incrementing auctionCount
         l.auctionCount++;
 
     }
 
-    function makeBid(uint _auctionId, uint _bid) external {
+    function makeBid(uint _auctionId, uint _bid) external returns (address highestBidder_) {
+
+        if(l.auctions[_auctionId].auctionCreator == msg.sender) revert CREATOR_CANNOT_BID();
+
 
         if(l.auctions[_auctionId].auctionCreator == address(0)) revert AUCTION_ID_NOT_FOUND();
 
@@ -77,14 +84,17 @@ contract AuctionFacet{
 
         if(_bidderBalance < _bid) revert INSUFFICIENT_BALANCE();
 
-        
-
         LibAppStorage._transferFrom(msg.sender, address(this), _bid);
 
+        ad.currentBid = _bid;
 
         if (ad.hightestBidder == address(0)){
 
             ad.hightestBidder = msg.sender;
+
+            highestBidder_ = msg.sender;
+
+            return highestBidder_;
 
         } else {
 
@@ -92,13 +102,14 @@ contract AuctionFacet{
 
             ad.hightestBidder = msg.sender;
 
+            highestBidder_ = msg.sender;
+
             ad.lastInteractor = msg.sender;
 
             totalFeeDistribution(_bid, _auctionId);
 
+            return highestBidder_;
         }
-
-        ad.currentBid = _bid;
 
 
     }
@@ -189,6 +200,14 @@ contract AuctionFacet{
         if (ad.hightestBidder != msg.sender) revert NOT_HIGHEST_BIDDER();
 
         IERC721(l.nftContractAddress).safeTransferFrom(address(this), ad.hightestBidder, ad.nftTokenId);
+    }
+
+    function getAuctionById(uint _auctionId) external returns (address owner) {
+        
+        LibAppStorage.AuctionDetails storage ad = l.auctions[_auctionId];
+
+        return ad.auctionCreator;
+
     }
 
 }

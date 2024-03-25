@@ -147,6 +147,27 @@ contract DiamondDeployer is Test, IDiamondCut {
         assertEq(addressBalance, 1000);
     }
 
+    function testTransferRevertWithYouDontHaveEnoughBalance() public {
+
+        switchSigner(A);
+
+        vm.expectRevert(bytes("You don't have enough balance"));
+
+        boundAuctionToken.transfer(B, 1200);
+
+    }
+
+    function testTransfer() public {
+        switchSigner(A);
+
+        bool res= boundAuctionToken.transfer(B, 900);
+
+        vm.assertEq(res, true);
+
+    }
+
+    
+
     // TESTING AUCTIONFACET
 
     // CREATE AUCTION FUNCTION
@@ -449,7 +470,7 @@ contract DiamondDeployer is Test, IDiamondCut {
     }
 
     // CLAIM NFT
-    function claimNFTToRevertWithAuctionInProgress()
+    function testclaimNFTToRevertWithAuctionInProgress()
         public
     {
         NFTContract(address(dNFTContract)).safeMint(A, 1);
@@ -472,6 +493,56 @@ contract DiamondDeployer is Test, IDiamondCut {
 
         boundAuction.claimNFT(1);
     }
+
+    function testclaimNFTToRevertWithNotHighestBidder()
+        public
+    {
+        NFTContract(address(dNFTContract)).safeMint(A, 1);
+
+        switchSigner(A);
+
+        IERC721(address(dNFTContract)).approve(address(diamond), 1);
+
+        boundAuction.createAuction(100, 100, 1);
+
+        switchSigner(B);
+
+        boundAuction.makeBid(1, 150);
+
+        switchSigner(C);
+
+        vm.warp(120);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(AuctionFacet.NOT_HIGHEST_BIDDER.selector)
+        );
+
+            boundAuction.claimNFT(1);
+    }
+
+     function testclaimNFT()
+        public
+    {
+        NFTContract(address(dNFTContract)).safeMint(A, 1);
+
+        switchSigner(A);
+
+        IERC721(address(dNFTContract)).approve(address(diamond), 1);
+
+        boundAuction.createAuction(100, 100, 1);
+
+        switchSigner(B);
+
+        boundAuction.makeBid(1, 150);
+
+        vm.warp(120);
+
+        boundAuction.claimNFT(1);
+
+        vm.assertEq(IERC721(address(dNFTContract)).ownerOf(1), B);
+        
+    }
+
 
 
     function generateSelectors(

@@ -197,7 +197,8 @@ error CREATOR_CANNOT_BID();
 
         if (ad.hightestBidder != msg.sender) revert NOT_HIGHEST_BIDDER();
 
-        IERC721(l.nftContractAddress).safeTransferFrom(address(this), ad.hightestBidder, ad.nftTokenId);
+        IERC721(l.nftContractAddress).transferFrom(address(this), ad.hightestBidder, ad.nftTokenId);
+        
     }
 
     function getAuctionById(uint _auctionId) external view returns (address owner) {

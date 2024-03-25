@@ -165,17 +165,17 @@ error CREATOR_CANNOT_BID();
     function claimTokenEqOfAuctionItem(uint _auctionId) external {
         LibAppStorage.AuctionDetails storage ad = l.auctions[_auctionId];
 
+        uint _auctionEllapseTime = ad.auctionCreatedTime + ad.duration;
+
+        if (block.timestamp < _auctionEllapseTime) revert AUCTION_IN_PROGRESS();
+
         if (ad.hightestBidder == address(0)) {
 
-           IERC721(l.nftContractAddress).safeTransferFrom(address(this), ad.auctionCreator, ad.nftTokenId);
+           IERC721(l.nftContractAddress).transferFrom(address(this), ad.auctionCreator, ad.nftTokenId);
 
         }else{
 
         if (ad.auctionCreator != msg.sender) revert NOT_TOKEN_OWNER();
-
-        uint _auctionEllapseTime = ad.auctionCreatedTime + ad.duration;
-
-        if (block.timestamp < _auctionEllapseTime) revert AUCTION_IN_PROGRESS();
 
         uint _nftValue = ad.currentBid * 90 /100;
 
@@ -191,8 +191,6 @@ error CREATOR_CANNOT_BID();
     function claimNFT(uint _auctionId) external {
         LibAppStorage.AuctionDetails storage ad = l.auctions[_auctionId];
 
-        if (ad.auctionCreator != msg.sender) revert NOT_TOKEN_OWNER();
-
         uint _auctionEllapseTime = ad.auctionCreatedTime + ad.duration;
 
         if (block.timestamp < _auctionEllapseTime) revert AUCTION_IN_PROGRESS();
@@ -202,7 +200,7 @@ error CREATOR_CANNOT_BID();
         IERC721(l.nftContractAddress).safeTransferFrom(address(this), ad.hightestBidder, ad.nftTokenId);
     }
 
-    function getAuctionById(uint _auctionId) external returns (address owner) {
+    function getAuctionById(uint _auctionId) external view returns (address owner) {
         
         LibAppStorage.AuctionDetails storage ad = l.auctions[_auctionId];
 

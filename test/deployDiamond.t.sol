@@ -148,6 +148,8 @@ contract DiamondDeployer is Test, IDiamondCut {
     }
 
     // TESTING AUCTIONFACET
+
+    // CREATE AUCTION FUNCTION
     function testCreateAuctionRevertWithZeroDurationNotAllowed() public {
         switchSigner(A);
 
@@ -194,6 +196,24 @@ contract DiamondDeployer is Test, IDiamondCut {
         boundAuction.createAuction(100, 100, 1);
 
         assertEq(boundAuction.getAuctionById(l.auctionCount + 1), A);
+    }
+
+
+    //MAKEBID FUNCTION 
+    function testMakeBidToRevertWithCraetorCannotBid() public {
+        NFTContract(address(dNFTContract)).safeMint(A, 1);
+
+        switchSigner(A);
+
+        IERC721(address(dNFTContract)).approve(address(diamond), 1);
+
+        boundAuction.createAuction(100, 100, 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(AuctionFacet.CREATOR_CANNOT_BID.selector)
+        );
+
+        boundAuction.makeBid(1, 150);
     }
 
     function testMakeBidToRevertWithAuctionIdNotFound() public {
@@ -288,22 +308,6 @@ contract DiamondDeployer is Test, IDiamondCut {
         boundAuction.makeBid(1, 2001);
     }
 
-    function testMakeBidToRevertWithCraetorCannotBid() public {
-        NFTContract(address(dNFTContract)).safeMint(A, 1);
-
-        switchSigner(A);
-
-        IERC721(address(dNFTContract)).approve(address(diamond), 1);
-
-        boundAuction.createAuction(100, 100, 1);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(AuctionFacet.CREATOR_CANNOT_BID.selector)
-        );
-
-        boundAuction.makeBid(1, 150);
-    }
-
     function testMakeBid() public {
         NFTContract(address(dNFTContract)).safeMint(A, 1);
 
@@ -339,6 +343,136 @@ contract DiamondDeployer is Test, IDiamondCut {
 
         vm.assertEq(highestBidder, C);
     }
+
+    // CLAIM AUCTION PRICE OF AUCTION
+    function testClaimTokenEqOfAuctionItemToRevertWithAuctionInProgress()
+        public
+    {
+        NFTContract(address(dNFTContract)).safeMint(A, 1);
+
+        switchSigner(A);
+
+        IERC721(address(dNFTContract)).approve(address(diamond), 1);
+
+        boundAuction.createAuction(100, 100, 1);
+
+        switchSigner(B);
+
+        boundAuction.makeBid(1, 150);
+
+        switchSigner(A);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(AuctionFacet.AUCTION_IN_PROGRESS.selector)
+        );
+
+        boundAuction.claimTokenEqOfAuctionItem(1);
+    }
+
+    function testClaimTokenEqOfAuctionItemToRevertWithNotTokenOwner()
+        public
+    {
+        NFTContract(address(dNFTContract)).safeMint(A, 1);
+
+        switchSigner(A);
+
+        IERC721(address(dNFTContract)).approve(address(diamond), 1);
+
+        boundAuction.createAuction(100, 100, 1);
+
+        switchSigner(B);
+
+        boundAuction.makeBid(1, 150);
+
+        switchSigner(C);
+
+        vm.warp(200);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(AuctionFacet.NOT_TOKEN_OWNER.selector)
+        );
+
+        boundAuction.claimTokenEqOfAuctionItem(1);
+    }
+
+     function testClaimWithoutBid()
+        public
+    {
+        NFTContract(address(dNFTContract)).safeMint(A, 1);
+
+        switchSigner(A);
+
+        IERC721(address(dNFTContract)).approve(address(diamond), 1);
+
+        boundAuction.createAuction(100, 100, 1);
+
+        vm.warp(200);
+
+        boundAuction.claimTokenEqOfAuctionItem(1);
+
+        vm.assertEq(IERC721(address(dNFTContract)).ownerOf(1), A);
+
+    }
+
+    function testClaimWithBid()
+        public
+    {
+        NFTContract(address(dNFTContract)).safeMint(A, 1);
+
+        switchSigner(A);
+
+        IERC721(address(dNFTContract)).approve(address(diamond), 1);
+
+        boundAuction.createAuction(100, 100, 1);
+
+        uint balanceBeforeClaim = l.balances[A];
+
+        switchSigner(B);
+
+        boundAuction.makeBid(1, 150);
+
+        switchSigner(C);
+
+        boundAuction.makeBid(1, 250);
+
+        vm.warp(200);
+
+        switchSigner(A);
+
+        boundAuction.claimTokenEqOfAuctionItem(1);
+
+        uint balanceAfterClaim = l.balances[A];
+
+        uint _currentBid = l.auctions[1].currentBid;
+        
+        vm.assertEq(balanceAfterClaim, balanceBeforeClaim + (_currentBid * 90) / 100 );
+    }
+
+    // CLAIM NFT
+    function claimNFTToRevertWithAuctionInProgress()
+        public
+    {
+        NFTContract(address(dNFTContract)).safeMint(A, 1);
+
+        switchSigner(A);
+
+        IERC721(address(dNFTContract)).approve(address(diamond), 1);
+
+        boundAuction.createAuction(100, 100, 1);
+
+        switchSigner(B);
+
+        boundAuction.makeBid(1, 150);
+
+        switchSigner(B);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(AuctionFacet.AUCTION_IN_PROGRESS.selector)
+        );
+
+        boundAuction.claimNFT(1);
+    }
+
 
     function generateSelectors(
         string memory _facetName
